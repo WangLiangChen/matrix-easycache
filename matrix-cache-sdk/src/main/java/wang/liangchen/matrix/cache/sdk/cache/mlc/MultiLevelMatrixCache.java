@@ -20,12 +20,10 @@ public class MultiLevelMatrixCache implements MatrixCache {
     private final Duration ttl;
     private final Cache localCache;
     private final Cache distributedCache;
-    private final MultiLevelMatrixCacheManager multilevelCacheManager;
 
     public MultiLevelMatrixCache(String name, Duration ttl, MultiLevelMatrixCacheManager multilevelCacheManager) {
         this.name = name;
         this.ttl = ttl;
-        this.multilevelCacheManager = multilevelCacheManager;
         this.localCache = multilevelCacheManager.getLocalCache(name, ttl);
         this.distributedCache = multilevelCacheManager.getDistributedCache(name, ttl);
     }
@@ -35,20 +33,20 @@ public class MultiLevelMatrixCache implements MatrixCache {
         // null说明缓存不存在
         ValueWrapper valueWrapper = localCache.get(key);
         if (null != valueWrapper) {
-            logger.debug("LocalCache Hit,name: {},key: {}", this.name, key);
+            logger.debug("LocalCache Hit, name:{}, key:{}", this.name, key);
             return valueWrapper;
         }
-        logger.debug("LocalCache Miss,name: {},key: {}", this.name, key);
+        logger.debug("LocalCache Miss, name:{}, key:{}", this.name, key);
         valueWrapper = distributedCache.get(key);
         if (null == valueWrapper) {
-            logger.debug("DistributedCache Miss,name: {},key: {}", this.name, key);
+            logger.debug("DistributedCache Miss, name:{}, key:{}", this.name, key);
             return null;
         }
-        logger.debug("DistributedCache Hit,name: {},key: {}", this.name, key);
+        logger.debug("DistributedCache Hit, name:{}, key:{}", this.name, key);
         Object value = valueWrapper.get();
         // 写入localCache
         localCache.put(key, value);
-        logger.debug("Sync to LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("DistributedCache sync to LocalCache, name:{}, key:{}", this.name, key);
         return valueWrapper;
     }
 
@@ -56,18 +54,18 @@ public class MultiLevelMatrixCache implements MatrixCache {
     public <T> T get(Object key, Class<T> type) {
         T value = localCache.get(key, type);
         if (null != value) {
-            logger.debug("LocalCache Hit,name: {},key: {}", this.name, key);
+            logger.debug("LocalCache Hit, name:{}, key:{}, class:{}", this.name, key, type);
             return value;
         }
-        logger.debug("LocalCache Miss,name: {},key: {}", this.name, key);
+        logger.debug("LocalCache Miss, name:{}, key:{}, class:{}", this.name, key, type);
         value = distributedCache.get(key, type);
         if (null == value) {
-            logger.debug("DistributedCache Miss,name: {},key: {}", this.name, key);
+            logger.debug("DistributedCache Miss , name:{}, key:{}, class:{}", this.name, key, type);
             return null;
         }
-        logger.debug("DistributedCache Hit,name: {},key: {}", this.name, key);
+        logger.debug("DistributedCache Hit, name:{}, key:{}, class:{}", this.name, key, type);
         localCache.put(key, value);
-        logger.debug("Sync to LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("DistributedCache sync to LocalCache, name:{}, key:{}, class:{}", this.name, key, type);
         return value;
     }
 
@@ -76,18 +74,18 @@ public class MultiLevelMatrixCache implements MatrixCache {
         boolean[] hits = {true, true};
         T value = localCache.get(key, () -> {
             hits[0] = false;
-            logger.debug("LocalCache Miss,Call valueLoader,name: {},key: {}", this.name, key);
+            logger.debug("LocalCache Miss, Call valueLoader, name:{}, key:{}", this.name, key);
             return distributedCache.get(key, () -> {
                 hits[1] = false;
-                logger.debug("DistributedCache Miss,Call valueLoader,name: {},key: {}", this.name, key);
+                logger.debug("DistributedCache Miss, Call valueLoader, name:{}, key:{}", this.name, key);
                 return valueLoader.call();
             });
         });
         if (hits[0]) {
-            logger.debug("LocalCache Hit by valueLoader,name: {},key: {}", this.name, key);
+            logger.debug("LocalCache Hit by valueLoader, name:{}, key:{}", this.name, key);
         }
         if (!hits[0] && hits[1]) {
-            logger.debug("DistributedCache Hit by valueLoader,name: {},key: {}", this.name, key);
+            logger.debug("DistributedCache Hit by valueLoader, name:{}, key:{}", this.name, key);
         }
         return value;
     }
@@ -95,51 +93,51 @@ public class MultiLevelMatrixCache implements MatrixCache {
     @Override
     public void put(Object key, Object value) {
         distributedCache.put(key, value);
-        logger.debug("put DistributedCache,name: {},key: {}", this.name, key);
+        logger.debug("put to DistributedCache, name:{}, key:{}", this.name, key);
         localCache.put(key, value);
-        logger.debug("put LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("put to LocalCache, name:{}, key:{}", this.name, key);
     }
 
     @Override
     public void evict(Object key) {
         distributedCache.evict(key);
-        logger.debug("evict DistributedCache,name: {},key: {}", this.name, key);
+        logger.debug("evict DistributedCache, name:{}, key:{}", this.name, key);
         localCache.evict(key);
-        logger.debug("evict LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("evict LocalCache, name:{}, key:{}", this.name, key);
     }
 
     @Override
     public void clear() {
         distributedCache.clear();
-        logger.debug("clear DistributedCache,name: {}", this.name);
+        logger.debug("clear DistributedCache, name:{}", this.name);
         localCache.clear();
-        logger.debug("clear LocalCache,name: {}", this.name);
+        logger.debug("clear LocalCache, name:{}", this.name);
     }
 
     @Override
     public ValueWrapper putIfAbsent(Object key, Object value) {
         distributedCache.putIfAbsent(key, value);
-        logger.debug("putIfAbsent DistributedCache,name: {},key: {}", this.name, key);
+        logger.debug("putIfAbsent DistributedCache, name:{}, key:{}", this.name, key);
         ValueWrapper valueWrapper = localCache.putIfAbsent(key, value);
-        logger.debug("putIfAbsent LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("putIfAbsent LocalCache, name:{}, key:{}", this.name, key);
         return valueWrapper;
     }
 
     @Override
     public boolean evictIfPresent(Object key) {
         distributedCache.evictIfPresent(key);
-        logger.debug("evictIfPresent DistributedCache,name: {},key: {}", this.name, key);
+        logger.debug("evictIfPresent DistributedCache, name:{}, key:{}", this.name, key);
         boolean evictIfPresent = localCache.evictIfPresent(key);
-        logger.debug("evictIfPresent LocalCache,name: {},key: {}", this.name, key);
+        logger.debug("evictIfPresent LocalCache, name:{}, key:{}", this.name, key);
         return evictIfPresent;
     }
 
     @Override
     public boolean invalidate() {
         distributedCache.invalidate();
-        logger.debug("invalidate DistributedCache,name: {}", this.name);
+        logger.debug("invalidate DistributedCache, name:{}", this.name);
         boolean invalidate = localCache.invalidate();
-        logger.debug("invalidate LocalCache,name: {}", this.name);
+        logger.debug("invalidate LocalCache, name:{}", this.name);
         return invalidate;
     }
 
@@ -172,5 +170,13 @@ public class MultiLevelMatrixCache implements MatrixCache {
     @Override
     public Object getNativeCache() {
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "MultiLevelMatrixCache{" +
+                "name='" + name + '\'' +
+                ", ttl=" + ttl +
+                '}';
     }
 }

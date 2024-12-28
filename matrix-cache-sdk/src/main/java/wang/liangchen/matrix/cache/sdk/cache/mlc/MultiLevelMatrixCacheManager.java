@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.lang.Nullable;
 import wang.liangchen.matrix.cache.sdk.cache.AbstractMatrixCacheManager;
 import wang.liangchen.matrix.cache.sdk.cache.MatrixCacheManager;
@@ -23,7 +23,7 @@ public class MultiLevelMatrixCacheManager extends AbstractMatrixCacheManager {
     private final static Logger logger = LoggerFactory.getLogger(MultiLevelMatrixCacheManager.class);
     private CacheManager localCacheManager;
     private CacheManager distributedCacheManager;
-    private RedisTemplate<Object, Object> redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     @Nullable
     @Override
@@ -61,19 +61,19 @@ public class MultiLevelMatrixCacheManager extends AbstractMatrixCacheManager {
         RedisSynchronizer.INSTANCE.init(this);
     }
 
-    public RedisTemplate<Object, Object> getRedisTemplate() {
+    public StringRedisTemplate getRedisTemplate() {
         return redisTemplate;
     }
 
 
-    public void handleEvictedKeys(List<Object> messages) {
-        messages.stream().map(Object::toString).forEach(message -> {
+    public void handleEvictedKeys(List<String> messages) {
+        messages.forEach(message -> {
             int index = message.indexOf(RedisSynchronizer.EVICT_MESSAGE_SPLITTER);
             if (index < 0) {
                 Cache cache = localCacheManager.getCache(message);
                 Optional.ofNullable(cache).ifPresent(e -> {
                     cache.clear();
-                    logger.debug("Cleared cache: {} ", message);
+                    logger.debug("Received Clear cache: {} ", message);
                 });
                 return;
             }
@@ -82,7 +82,7 @@ public class MultiLevelMatrixCacheManager extends AbstractMatrixCacheManager {
             Optional.ofNullable(cache).ifPresent(e -> {
                 String key = message.substring(index + RedisSynchronizer.EVICT_MESSAGE_SPLITTER.length());
                 cache.evict(key);
-                logger.debug("Evicted cache: {},key: {}", name, key);
+                logger.debug("Received evicted cache: {},key: {}", name, key);
             });
         });
     }

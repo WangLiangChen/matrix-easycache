@@ -7,6 +7,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
@@ -24,9 +25,9 @@ public class MatrixMultiLevelCachingConfiguration {
     @Primary
     public CacheManager multiLevelCacheManager(CacheProperties cacheProperties,
                                                ObjectProvider<CacheLoader<Object, Object>> caffeineCacheLoaderProvider,
-                                               ObjectProvider<RedisConnectionFactory> redisConnectionFactoryProvider) {
+                                               StringRedisTemplate redisTemplate) {
         CacheManager localeCacheManager = new MatrixLocalCachingConfiguration().localCacheManager(cacheProperties, caffeineCacheLoaderProvider);
-        CacheManager distributedCacheManager = new MatrixDistributedCachingConfiguration().distributedCacheManager(cacheProperties, redisConnectionFactoryProvider);
+        CacheManager distributedCacheManager = new MatrixDistributedCachingConfiguration().distributedCacheManager(cacheProperties, redisTemplate);
         MultiLevelMatrixCacheManager cacheManager = new MultiLevelMatrixCacheManager();
         cacheManager.setLocalCacheManager((MatrixCaffeineMatrixCacheManager) localeCacheManager);
         cacheManager.setDistributedCacheManager((MatrixRedisMatrixCacheManager) distributedCacheManager);
@@ -34,10 +35,9 @@ public class MatrixMultiLevelCachingConfiguration {
     }
 
     @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(ObjectProvider<RedisConnectionFactory> redisConnectionFactoryProvider, MultiLevelMatrixCacheManager multilevelCacheManager) {
+    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory, MultiLevelMatrixCacheManager multilevelCacheManager) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-        //container.setConnectionFactory(redisConnectionFactory);
-        redisConnectionFactoryProvider.ifAvailable(container::setConnectionFactory);
+        container.setConnectionFactory(redisConnectionFactory);
         container.setTaskExecutor(Executors.newFixedThreadPool(4, new CustomizableThreadFactory("mx-redis-listener-")));
         MessageListenerAdapter listener = new MessageListenerAdapter(new RedisMessageListener());
         listener.afterPropertiesSet();

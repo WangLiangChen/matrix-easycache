@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Role;
 import org.springframework.util.function.SingletonSupplier;
-import wang.liangchen.matrix.cache.sdk.generator.MatrixKeyGenerator;
+import wang.liangchen.matrix.cache.sdk.generator.MatrixCacheKeyGenerator;
 import wang.liangchen.matrix.cache.sdk.override.MatrixCacheAnnotationParser;
 import wang.liangchen.matrix.cache.sdk.override.MatrixCacheInterceptor;
 import wang.liangchen.matrix.cache.sdk.override.MatrixCacheResolver;
@@ -57,7 +57,7 @@ public class MatrixCachingConfiguration {
 
             @Override
             public KeyGenerator keyGenerator() {
-                return new MatrixKeyGenerator();
+                return new MatrixCacheKeyGenerator();
             }
 
             @Override

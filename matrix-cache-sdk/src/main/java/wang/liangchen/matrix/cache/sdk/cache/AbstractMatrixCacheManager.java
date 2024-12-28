@@ -11,9 +11,10 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractMatrixCacheManager implements MatrixCacheManager {
-    private static final Logger logger =  LoggerFactory.getLogger(AbstractMatrixCacheManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractMatrixCacheManager.class);
     private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>(32);
     private boolean allowNullValues = true;
     private boolean transactionAware = false;
@@ -28,9 +29,21 @@ public abstract class AbstractMatrixCacheManager implements MatrixCacheManager {
     public Cache getCache(String name, Duration ttl) {
         Cache cache = this.cacheMap.get(name);
         if (cache != null) {
+            logger.debug("Cache '{}' is present, ignore new ttl", name);
             return cache;
         }
-        return this.cacheMap.computeIfAbsent(name, cacheName -> decorateCache(getMissingCache(name, ttl)));
+        return this.cacheMap.computeIfAbsent(name, cacheName -> {
+            // if random
+            if ((null == ttl || Duration.ZERO == ttl) && Boolean.parseBoolean(System.getProperty("matrix.cache.ttl.random", "false"))) {
+                Duration randomTtl = Duration.ofMinutes(ThreadLocalRandom.current().nextInt(10, 120));
+                Cache newCache = decorateCache(getMissingCache(name, randomTtl));
+                logger.debug("Cache '{}' is absent, create a new cache:{} with random ttl", cacheName, newCache);
+                return newCache;
+            }
+            Cache newCache = decorateCache(getMissingCache(name, ttl));
+            logger.debug("Cache '{}' is absent, create a new cache:{}", cacheName, newCache.toString());
+            return newCache;
+        });
     }
 
     @Nullable

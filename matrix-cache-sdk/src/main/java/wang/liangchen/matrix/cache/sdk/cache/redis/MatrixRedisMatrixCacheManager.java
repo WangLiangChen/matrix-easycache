@@ -3,8 +3,7 @@ package wang.liangchen.matrix.cache.sdk.cache.redis;
 
 import org.springframework.cache.Cache;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheWriter;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import wang.liangchen.matrix.cache.sdk.cache.AbstractMatrixCacheManager;
 
 import java.time.Duration;
@@ -13,13 +12,11 @@ import java.time.Duration;
  * @author LiangChen.Wang 2021/4/16
  */
 public class MatrixRedisMatrixCacheManager extends AbstractMatrixCacheManager {
-    private final RedisCacheWriter cacheWriter;
     private final RedisCacheConfiguration cacheConfig;
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final RedisCacheConfiguration defaultCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();
 
-    public MatrixRedisMatrixCacheManager(RedisCacheConfiguration cacheConfig, RedisTemplate<Object, Object> redisTemplate) {
-        this.cacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(redisTemplate.getConnectionFactory());
+    public MatrixRedisMatrixCacheManager(RedisCacheConfiguration cacheConfig, StringRedisTemplate redisTemplate) {
         this.cacheConfig = cacheConfig;
         this.redisTemplate = redisTemplate;
     }
@@ -33,10 +30,10 @@ public class MatrixRedisMatrixCacheManager extends AbstractMatrixCacheManager {
         if (!isAllowNullValues()) {
             localConfig = localConfig.disableCachingNullValues();
         }
-        return new MatrixRedisMatrixCache(name, cacheWriter, localConfig, redisTemplate);
+        return new MatrixRedisMatrixCache(name, localConfig, redisTemplate);
     }
 
-    public RedisTemplate<Object, Object> getRedisTemplate() {
+    public StringRedisTemplate getRedisTemplate() {
         return redisTemplate;
     }
 }

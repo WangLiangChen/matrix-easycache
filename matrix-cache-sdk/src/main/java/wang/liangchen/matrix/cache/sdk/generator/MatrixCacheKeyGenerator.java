@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 /**
  * @author Liangchen.Wang
  */
-public class MatrixKeyGenerator implements KeyGenerator {
+public class MatrixCacheKeyGenerator implements KeyGenerator {
     @Override
     public Object generate(Object target, Method method, Object... params) {
         return new MatrixCacheKey(target, method, params);

@@ -3,7 +3,7 @@ package wang.liangchen.matrix.cache.sdk.consistency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.BoundListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 import wang.liangchen.matrix.cache.sdk.cache.mlc.MultiLevelMatrixCacheManager;
 
@@ -24,7 +24,7 @@ public enum RedisSynchronizer {
     private final DateTimeFormatter EVICT_QUEUE_KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private MultiLevelMatrixCacheManager multilevelCacheManager;
-    private RedisTemplate<Object, Object> redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     public static final String EVICT_MESSAGE_TOPIC = "MatrixCacheEvictMessage";
     private static final String EMPTY_STRING = "";
@@ -32,7 +32,7 @@ public enum RedisSynchronizer {
     private static final long PULL_DELAY_SECONDS = 5;
 
     private Long offset;
-    private BoundListOperations<Object, Object> evictQueue;
+    private BoundListOperations<String, String> evictQueue;
 
 
     public void init(MultiLevelMatrixCacheManager multilevelCacheManager) {
@@ -64,7 +64,7 @@ public enum RedisSynchronizer {
         Long size = this.evictQueue.size();
         logger.debug("pull from evictQueue, key:{}, offset:{}, size:{}", evictQueueKey, this.offset, size);
         if (size > this.offset) {
-            List<Object> messages = this.evictQueue.range(offset, size - 1);
+            List<String> messages = this.evictQueue.range(offset, size - 1);
             logger.debug("pulled from evictQueue, key:{}, messages:{}", evictQueueKey, messages);
             multilevelCacheManager.handleEvictedKeys(messages);
             this.offset = size;
@@ -88,7 +88,7 @@ public enum RedisSynchronizer {
         return newKey;
     }
 
-    private void startPreviousEvictQueueTimer(BoundListOperations<Object, Object> previousEvictQueue, Long offset) {
+    private void startPreviousEvictQueueTimer(BoundListOperations<String, String> previousEvictQueue, Long offset) {
         String previousEvictQueueKey = previousEvictQueue.getKey().toString();
         AtomicLong atomicOffset = new AtomicLong(offset);
         // 开启定时
@@ -98,7 +98,7 @@ public enum RedisSynchronizer {
             long previousOffset = atomicOffset.get();
             logger.debug("pull from previousEvictQueue, key:{}, offset:{}, size:{}", previousEvictQueueKey, previousOffset, size);
             if (size > previousOffset) {
-                List<Object> messages = previousEvictQueue.range(previousOffset, size - 1);
+                List<String> messages = previousEvictQueue.range(previousOffset, size - 1);
                 logger.debug("pulled from previousEvictQueue, key:{}, messages:{}", previousEvictQueueKey, messages);
                 multilevelCacheManager.handleEvictedKeys(messages);
                 atomicOffset.getAndSet(size);

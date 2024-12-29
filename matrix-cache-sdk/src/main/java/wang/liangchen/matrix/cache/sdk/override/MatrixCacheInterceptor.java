@@ -26,7 +26,6 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
     private boolean initialized = false;
     private static final Object NO_RESULT = new Object();
     private static final Object RESULT_UNAVAILABLE = new Object();
-    //private final CacheOperationExpressionEvaluator evaluator = new CacheOperationExpressionEvaluator();
     private final Map<CacheOperationCacheKey, CacheOperationMetadata> metadataCache = new ConcurrentHashMap<>(1024);
 
     @Override
@@ -41,7 +40,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         if (!this.initialized) {
             return invoker.invoke();
         }
-        // CacheOperationSource 使用 MatrixCacheAnnotationParser 来解析自定义的注解
+        // 重新注入AnnotationCacheOperationSource，使用 MatrixCacheAnnotationParser 来解析自定义的注解
         CacheOperationSource cacheOperationSource = getCacheOperationSource();
         if (null == cacheOperationSource) {
             return invoker.invoke();
@@ -76,7 +75,6 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
                 return invokeOperation(invoker);
             }
         }
-
 
         // Process any early evictions
         processCacheEvicts(contexts.get(CacheEvictOperation.class), true, NO_RESULT);
@@ -134,9 +132,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         return (cachePutContexts.size() != excluded.size());
     }
 
-    private void collectPutRequests(Collection<CacheOperationContext> contexts,
-                                    @Nullable Object result, Collection<CachePutRequest> putRequests) {
-
+    private void collectPutRequests(Collection<CacheOperationContext> contexts, @Nullable Object result, Collection<CachePutRequest> putRequests) {
         for (CacheOperationContext context : contexts) {
             if (isConditionPassing(context, result)) {
                 Object key = generateKey(context, result);
@@ -178,9 +174,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         return null;
     }
 
-    private void processCacheEvicts(
-            Collection<CacheOperationContext> contexts, boolean beforeInvocation, @Nullable Object result) {
-
+    private void processCacheEvicts(Collection<CacheOperationContext> contexts, boolean beforeInvocation, @Nullable Object result) {
         for (CacheOperationContext context : contexts) {
             CacheEvictOperation operation = (CacheEvictOperation) context.metadata.operation;
             if (beforeInvocation == operation.isBeforeInvocation() && isConditionPassing(context, result)) {
@@ -189,9 +183,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         }
     }
 
-    private void performCacheEvict(
-            CacheOperationContext context, CacheEvictOperation operation, @Nullable Object result) {
-
+    private void performCacheEvict(CacheOperationContext context, CacheEvictOperation operation, @Nullable Object result) {
         Object key = null;
         for (Cache cache : context.getCaches()) {
             if (operation.isCacheWide()) {
@@ -209,15 +201,13 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
 
     private void logInvalidating(CacheOperationContext context, CacheEvictOperation operation, @Nullable Object key) {
         if (logger.isTraceEnabled()) {
-            logger.trace("Invalidating " + (key != null ? "cache key [" + key + "]" : "entire cache") +
-                    " for operation " + operation + " on method " + context.metadata.method);
+            logger.trace("Invalidating " + (key != null ? "cache key [" + key + "]" : "entire cache for operation " + operation + " on method " + context.metadata.method));
         }
     }
 
     @Nullable
     private Object wrapCacheValue(Method method, @Nullable Object cacheValue) {
-        if (method.getReturnType() == Optional.class &&
-                (cacheValue == null || cacheValue.getClass() != Optional.class)) {
+        if (method.getReturnType() == Optional.class && (cacheValue == null || cacheValue.getClass() != Optional.class)) {
             return Optional.ofNullable(cacheValue);
         }
         return cacheValue;
@@ -247,8 +237,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
     private boolean isConditionPassing(CacheOperationContext context, @Nullable Object result) {
         boolean passing = context.isConditionPassing(result);
         if (!passing && logger.isTraceEnabled()) {
-            logger.trace("Cache condition failed on method " + context.metadata.method +
-                    " for operation " + context.metadata.operation);
+            logger.trace("Cache condition failed on method " + context.metadata.method + " for operation " + context.metadata.operation);
         }
         return passing;
     }
@@ -368,12 +357,9 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
     private class CacheOperationContexts {
 
         private final MultiValueMap<Class<? extends CacheOperation>, CacheOperationContext> contexts;
-
         private final boolean sync;
 
-        public CacheOperationContexts(Collection<? extends CacheOperation> operations, Method method,
-                                      Object[] args, Object target, Class<?> targetClass) {
-
+        public CacheOperationContexts(Collection<? extends CacheOperation> operations, Method method, Object[] args, Object target, Class<?> targetClass) {
             this.contexts = new LinkedMultiValueMap<>(operations.size());
             for (CacheOperation op : operations) {
                 CacheOperationContext cacheOperationContext = getOperationContext(op, method, args, target, targetClass);
@@ -405,22 +391,18 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
             }
             if (syncEnabled) {
                 if (this.contexts.size() > 1) {
-                    throw new IllegalStateException(
-                            "@Cacheable(sync=true) cannot be combined with other cache operations on '" + method + "'");
+                    throw new IllegalStateException("@Cacheable(sync=true) cannot be combined with other cache operations on '" + method + "'");
                 }
                 if (cacheOperationContexts.size() > 1) {
-                    throw new IllegalStateException(
-                            "Only one @Cacheable(sync=true) entry is allowed on '" + method + "'");
+                    throw new IllegalStateException("Only one @Cacheable(sync=true) entry is allowed on '" + method + "'");
                 }
                 CacheOperationContext cacheOperationContext = cacheOperationContexts.iterator().next();
                 MatrixCacheableOperation operation = (MatrixCacheableOperation) cacheOperationContext.getOperation();
                 if (cacheOperationContext.getCaches().size() > 1) {
-                    throw new IllegalStateException(
-                            "@Cacheable(sync=true) only allows a single cache on '" + operation + "'");
+                    throw new IllegalStateException("@Cacheable(sync=true) only allows a single cache on '" + operation + "'");
                 }
                 if (StringUtils.hasText(operation.getUnless())) {
-                    throw new IllegalStateException(
-                            "@Cacheable(sync=true) does not support unless attribute on '" + operation + "'");
+                    throw new IllegalStateException("@Cacheable(sync=true) does not support unless attribute on '" + operation + "'");
                 }
                 return true;
             }
@@ -428,7 +410,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         }
     }
 
-    private class CacheOperationMetadata extends org.springframework.cache.interceptor.CacheAspectSupport.CacheOperationMetadata {
+    private static class CacheOperationMetadata extends org.springframework.cache.interceptor.CacheAspectSupport.CacheOperationMetadata {
         private final CacheOperation operation;
         private final Method method;
 
@@ -474,7 +456,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
     }
 
 
-    private class CacheExpressionRootObject {
+    private static class CacheExpressionRootObject {
 
         private final Collection<? extends Cache> caches;
 
@@ -524,14 +506,11 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
 
     }
 
-    private class CacheEvaluationContext extends MethodBasedEvaluationContext {
+    private static class CacheEvaluationContext extends MethodBasedEvaluationContext {
 
         private final Set<String> unavailableVariables = new HashSet<>(1);
 
-
-        CacheEvaluationContext(Object rootObject, Method method, Object[] arguments,
-                               ParameterNameDiscoverer parameterNameDiscoverer) {
-
+        CacheEvaluationContext(Object rootObject, Method method, Object[] arguments, ParameterNameDiscoverer parameterNameDiscoverer) {
             super(rootObject, method, arguments, parameterNameDiscoverer);
         }
 
@@ -562,7 +541,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
 
     }
 
-    private class VariableNotAvailableException extends EvaluationException {
+    private static class VariableNotAvailableException extends EvaluationException {
 
         private final String name;
 
@@ -579,7 +558,7 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
 
     }
 
-    private class CacheOperationExpressionEvaluator extends CachedExpressionEvaluator {
+    private static class CacheOperationExpressionEvaluator extends CachedExpressionEvaluator {
 
         /**
          * Indicate that there is no result variable.
@@ -620,10 +599,8 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
                                                          Method method, Object[] args, Object target, Class<?> targetClass, Method targetMethod,
                                                          @Nullable Object result, @Nullable BeanFactory beanFactory) {
 
-            CacheExpressionRootObject rootObject = new CacheExpressionRootObject(
-                    caches, method, args, target, targetClass);
-            CacheEvaluationContext evaluationContext = new CacheEvaluationContext(
-                    rootObject, targetMethod, args, getParameterNameDiscoverer());
+            CacheExpressionRootObject rootObject = new CacheExpressionRootObject(caches, method, args, target, targetClass);
+            CacheEvaluationContext evaluationContext = new CacheEvaluationContext(rootObject, targetMethod, args, getParameterNameDiscoverer());
             if (result == RESULT_UNAVAILABLE) {
                 evaluationContext.addUnavailableVariable(RESULT_VARIABLE);
             } else if (result != NO_RESULT) {
@@ -641,13 +618,11 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
         }
 
         public boolean condition(String conditionExpression, AnnotatedElementKey methodKey, EvaluationContext evalContext) {
-            return (Boolean.TRUE.equals(getExpression(this.conditionCache, methodKey, conditionExpression).getValue(
-                    evalContext, Boolean.class)));
+            return (Boolean.TRUE.equals(getExpression(this.conditionCache, methodKey, conditionExpression).getValue(evalContext, Boolean.class)));
         }
 
         public boolean unless(String unlessExpression, AnnotatedElementKey methodKey, EvaluationContext evalContext) {
-            return (Boolean.TRUE.equals(getExpression(this.unlessCache, methodKey, unlessExpression).getValue(
-                    evalContext, Boolean.class)));
+            return (Boolean.TRUE.equals(getExpression(this.unlessCache, methodKey, unlessExpression).getValue(evalContext, Boolean.class)));
         }
 
         /**
@@ -662,8 +637,6 @@ public class MatrixCacheInterceptor extends org.springframework.cache.intercepto
     }
 
     private static class InvocationAwareResult {
-
         boolean invoked;
-
     }
 }

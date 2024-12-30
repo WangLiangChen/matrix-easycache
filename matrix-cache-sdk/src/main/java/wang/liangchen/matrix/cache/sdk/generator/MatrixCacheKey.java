@@ -20,18 +20,20 @@ public class MatrixCacheKey implements Serializable {
         this.params[0] = target.getClass().getSimpleName();
         this.params[1] = method.getName();
         System.arraycopy(elements, 0, this.params, 2, elements.length);
+        // only params are used to calculate hashCode
         this.hashCode = Arrays.deepHashCode(this.params);
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return (this == other || (other instanceof MatrixCacheKey that && Arrays.deepEquals(this.params, that.params)));
     }
 
     @Override
     public final int hashCode() {
         // Expose pre-calculated hashCode field
         return this.hashCode;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        // compare params only
+        return (this == other || (other instanceof MatrixCacheKey that && Arrays.deepEquals(this.params, that.params)));
     }
 
     @Override

@@ -39,6 +39,7 @@ public class MatrixCaffeineMatrixCacheManager extends AbstractMatrixCacheManager
         if (Duration.ZERO.compareTo(ttl) < 0) {
             cacheBuilder.expireAfterWrite(ttl);
         }
+        cacheBuilder.removalListener(removalListener);
         cacheBuilder.evictionListener(removalListener);
         return (this.cacheLoader != null ? cacheBuilder.build(this.cacheLoader) : cacheBuilder.build());
     }

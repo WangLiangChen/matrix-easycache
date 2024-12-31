@@ -28,10 +28,10 @@ public class MatrixRedisMatrixCache extends org.springframework.data.redis.cache
     private final ScanOptions scanOptions;
 
     public MatrixRedisMatrixCache(String name, RedisCacheConfiguration redisCacheConfiguration, StringRedisTemplate redisTemplate) {
-        super(name, RedisCacheWriter.nonLockingRedisCacheWriter(redisTemplate.getRequiredConnectionFactory(), BatchStrategies.scan(Integer.MAX_VALUE)), redisCacheConfiguration);
+        super(name, RedisCacheWriter.nonLockingRedisCacheWriter(redisTemplate.getRequiredConnectionFactory(), BatchStrategies.scan(512)), redisCacheConfiguration);
         this.redisTemplate = redisTemplate;
         this.ttl = redisCacheConfiguration.getTtlFunction().getTimeToLive(Object.class, null);
-        scanOptions = ScanOptions.scanOptions().match(this.createCacheKey("*")).count(Integer.MAX_VALUE).build();
+        scanOptions = ScanOptions.scanOptions().match(this.createCacheKey("*")).count(512).build();
     }
 
     @Override
